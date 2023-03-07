@@ -1,64 +1,39 @@
-name: Export and deploy solution
 on:
-  push:
-    branches: [ main ]
+ push:
+   branches:
+     main
 jobs:
-  export-solution:
-    runs-on: ubuntu-latest
+  build:
+    runs-on: windows-latest   # alternate runner OS is: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Authenticate to Power Platform environment
-        uses: microsoft/powerplatform-actions/environment/authenticate@v0.10.3
-        with:
-          environment-url: ${{ secrets.ENVIRONMENT_URL }}
-          user-name: ${{ secrets.USER_NAME }}
-          password-secret: ${{ secrets.MYPASSWORD }}
-      - name: Export solution as unmanaged
-        id: export-solution
-        uses: microsoft/powerplatform-actions/solution/export@v0.10.3
-        with:
-          solution-name: 'Contoso Healthcare'
-          output-file-path: 'ContosoHealthcare.zip'
-      - name: Upload artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: ContosoHealthcare-unmanaged.zip
-          path: ContosoHealthcare.zip
+    - name: Export Solution
+      uses: microsoft/powerplatform-actions/export-solution@v0
+      with:
+        environment-url: ${{secrets.ENVIRONMENT_URL}}
+        user-name: ${{secrets.USER_NAME}}
+        password-secret: ${{ secrets.MYPASSWORD }}
+        solution-name: Contoso Healthcare
+        solution-output-file: 'contoso.zip'
+        working-directory: 'out'
 
-  pack-solution:
-    needs: export-solution # wait for previous job to finish
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v2 # download exported solution from previous job 
-        with:
-          name: MyPowerApp-unmanaged.zip 
-      - name : Pack solution as managed 
-        id : pack-solution 
-        uses : microsoft/powerplatform-actions/solution/pack@v0.10.3
-        with : 
-          input-file-path : 'MyPowerApp-unmanaged.zip' # use exported solution as input 
-          output-file-path : 'MyPowerApp-managed.zip' # generate managed solution as output 
-      - name : Upload artifact 
-        uses : actions/upload-artifact@v2 # upload packed solution for next job 
-        with :
-          name : MyPowerApp-managed.zip 
-          path : MyPowerApp-managed.zip 
+    - name: Unpack Solution
+      uses: microsoft/powerplatform-actions/unpack-solution@v0
+      with:
+        solution-file: 'out/contoso.zip'
+        solution-folder: 'out/solutions/solution one'
+        solution-type: 'Unmanaged'
+        overwrite-files: true
 
-  deploy-solution:
-    needs: pack-solution # wait for previous job to finish
-    runs-on: ubuntu-latest
-    steps:
-      - uses : actions/download-artifact@v2 # download packed solution from previous job 
-        with :
-          name : MyPowerApp-managed.zip  
-      - name : Authenticate to Power Platform environment  
-        uses : microsoft/powerplatform-actions/environment/authenticate@v0.10.3 
-        with :
-          environment-url : ${{ secrets.PRODUCTION_URL }} # use production environment URL  
-          user-name : ${{ secrets.USER_NAME }}  
-          password-secret : ${{ secrets.MYPASSWORD }}  
-      - name : Import and publish solution  
-        id : import-solution  
-        uses : microsoft/powerplatform-actions/solution/import-publish@v0.10.3 
-        with :
-          input-file-path : 'MyPowerApp-managed.zip' # use packed solution as input  
+    - name: Publish Solution
+      uses: microsoft/powerplatform-actions/publish-solution@v0
+      with:
+        environment-url: ${{secrets.ENVIRONMENT_URL}}
+        user-name: ${{secrets.USER_NAME}}
+        password-secret: ${{ secrets.MYPASSWORD }}
+
+    - name: Prepare solution changes for check-in into source control
+      uses: microsoft/powerplatform-actions/branch-solution@v0
+      with:
+        solution-folder: 'out/solutions/solution one'
+        solution-target-folder: 'src/solutions/solution1'
+        token: ${{ secrets.GITHUB_TOKEN }}
