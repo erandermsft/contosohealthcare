@@ -8,14 +8,14 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Authenticate to Power Platform environment
-        uses: microsoft/powerplatform-actions/environment/authenticate@v1
+        uses: microsoft/powerplatform-actions/environment/authenticate@v0.10.3
         with:
           environment-url: ${{ secrets.ENVIRONMENT_URL }}
           user-name: ${{ secrets.USER_NAME }}
           password-secret: ${{ secrets.MYPASSWORD }}
       - name: Export solution as unmanaged
         id: export-solution
-        uses: microsoft/powerplatform-actions/solution/export@v1
+        uses: microsoft/powerplatform-actions/solution/export@v0.10.3
         with:
           solution-name: 'Contoso Healthcare'
           output-file-path: 'ContosoHealthcare.zip'
@@ -34,7 +34,7 @@ jobs:
           name: MyPowerApp-unmanaged.zip 
       - name : Pack solution as managed 
         id : pack-solution 
-        uses : microsoft/powerplatform-actions/solution/pack@v1 
+        uses : microsoft/powerplatform-actions/solution/pack@v0.10.3
         with : 
           input-file-path : 'MyPowerApp-unmanaged.zip' # use exported solution as input 
           output-file-path : 'MyPowerApp-managed.zip' # generate managed solution as output 
@@ -52,13 +52,13 @@ jobs:
         with :
           name : MyPowerApp-managed.zip  
       - name : Authenticate to Power Platform environment  
-        uses : microsoft/powerplatform-actions/environment/authenticate@v1  
+        uses : microsoft/powerplatform-actions/environment/authenticate@v0.10.3 
         with :
           environment-url : ${{ secrets.PRODUCTION_URL }} # use production environment URL  
           user-name : ${{ secrets.USER_NAME }}  
           password-secret : ${{ secrets.MYPASSWORD }}  
       - name : Import and publish solution  
         id : import-solution  
-        uses : microsoft/powerplatform-actions/solution/import-publish@v1  
+        uses : microsoft/powerplatform-actions/solution/import-publish@v0.10.3 
         with :
           input-file-path : 'MyPowerApp-managed.zip' # use packed solution as input  
