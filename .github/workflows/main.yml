@@ -1,0 +1,64 @@
+name: Export and deploy solution
+on:
+  push:
+    branches: [ main ]
+jobs:
+  export-solution:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Authenticate to Power Platform environment
+        uses: microsoft/powerplatform-actions/environment/authenticate@v1
+        with:
+          environment-url: ${{ secrets.ENVIRONMENT_URL }}
+          user-name: ${{ secrets.USER_NAME }}
+          password-secret: ${{ secrets.MYPASSWORD }}
+      - name: Export solution as unmanaged
+        id: export-solution
+        uses: microsoft/powerplatform-actions/solution/export@v1
+        with:
+          solution-name: 'Contoso Healthcare'
+          output-file-path: 'ContosoHealthcare.zip'
+      - name: Upload artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ContosoHealthcare-unmanaged.zip
+          path: ContosoHealthcare.zip
+
+  pack-solution:
+    needs: export-solution # wait for previous job to finish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2 # download exported solution from previous job 
+        with:
+          name: MyPowerApp-unmanaged.zip 
+      - name : Pack solution as managed 
+        id : pack-solution 
+        uses : microsoft/powerplatform-actions/solution/pack@v1 
+        with : 
+          input-file-path : 'MyPowerApp-unmanaged.zip' # use exported solution as input 
+          output-file-path : 'MyPowerApp-managed.zip' # generate managed solution as output 
+      - name : Upload artifact 
+        uses : actions/upload-artifact@v2 # upload packed solution for next job 
+        with :
+          name : MyPowerApp-managed.zip 
+          path : MyPowerApp-managed.zip 
+
+  deploy-solution:
+    needs: pack-solution # wait for previous job to finish
+    runs-on: ubuntu-latest
+    steps:
+      - uses : actions/download-artifact@v2 # download packed solution from previous job 
+        with :
+          name : MyPowerApp-managed.zip  
+      - name : Authenticate to Power Platform environment  
+        uses : microsoft/powerplatform-actions/environment/authenticate@v1  
+        with :
+          environment-url : ${{ secrets.PRODUCTION_URL }} # use production environment URL  
+          user-name : ${{ secrets.USER_NAME }}  
+          password-secret : ${{ secrets.MYPASSWORD }}  
+      - name : Import and publish solution  
+        id : import-solution  
+        uses : microsoft/powerplatform-actions/solution/import-publish@v1  
+        with :
+          input-file-path : 'MyPowerApp-managed.zip' # use packed solution as input  
